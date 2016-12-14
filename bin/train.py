@@ -47,9 +47,6 @@ if __name__ == '__main__':
 
     # optional
     p.add_argument('-g', '--gpu', type=int, default=None, help="GPU number")
-    args = p.parse_args(["--train", "build/snli_1.0/snli_1.0/snli_1.0_train.jsonl",
-                         "--dev", "build/snli_1.0/snli_1.0/snli_1.0_dev.jsonl",
-                         "--test", "build/snli_1.0/snli_1.0/snli_1.0_test.jsonl",
-                         "--word2vec", "build/glove.840B.300d.txt"])
+    args = p.parse_args()
 
     run(args)

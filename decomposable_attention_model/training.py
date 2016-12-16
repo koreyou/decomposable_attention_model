@@ -9,7 +9,7 @@ import numpy as np
 def _accuracy(pred, t):
     y = to_cpu(pred)
     t = to_cpu(t)
-    return np.average(y == t)
+    return float(np.average(y == t))
 
 
 def clip_data(x, l):
@@ -24,12 +24,12 @@ def _run_batch(model, optimizer, batch, device, train):
     x1 = clip_data(x1, l1)
     y = model(chainer.Variable(x0), chainer.Variable(x1), l0, l1, train)
     loss = F.softmax_cross_entropy(y, chainer.Variable(t))
-    pred = F.argmax(F.softmax(y), axis=1)
-    acc = _accuracy(pred.data, t)
+    pred = to_cpu(F.argmax(F.softmax(y), axis=1).data)
+    acc = _accuracy(pred, t)
     if optimizer is not None:
         loss.backward()
         optimizer.update()
-    return float(loss.data), acc, pred.data
+    return float(to_cpu(loss.data)), acc, pred
 
 
 def forward_pred(model, dataset, device=None):

@@ -89,19 +89,24 @@ class DecomposableAttentionModel(chainer.Chain):
         return s1, s2
 
     @staticmethod
-    def _token_wise_linear(x, f, train):
+    def _token_wise_linear(x, f, l, train, xp):
         s = list(x.shape)
         n_tokens = np.prod(s[:-1])
         z = F.reshape(f(F.reshape(x, (n_tokens, -1)), train), s[:-1] + [-1,])
+        if l is not None:
+            # mask: (B, T, 1)
+            mask = xp.tile(xp.arange(s[1]).reshape(1, s[1], 1), (s[0], 1, 1)) < l.reshape(s[0], 1, 1)
+            mask = F.broadcast_to(chainer.Variable(mask), z.shape)
+            padding = chainer.Variable(xp.zeros(z.shape, dtype=z.dtype))
+            z = F.where(mask, z, padding)
         return z
 
-    def _compare(self, a, beta, train):
+    def _compare(self, a, beta, l, train, xp):
         # Make one comparison (correspond to eq. 3)
-        t = a.shape[1]
         # [(B, Ti, M), (B, Ti, M)] -> (B, Ti, M + M))
         concated = F.concat((a, beta), axis=2)
         # (B, Ti, M + M) -> (B, Ti, M')
-        v_i = self._token_wise_linear(concated, self.g, train)
+        v_i = self._token_wise_linear(concated, self.g, l, train, xp)
         # (B, Ti, M') -> (B, M')
         v = F.sum(v_i, axis=1)
         return v
@@ -128,12 +133,12 @@ class DecomposableAttentionModel(chainer.Chain):
         if not self._train_embedding:
             a.unchain_backward()
             b.unchain_backward()
-            a = self._token_wise_linear(a, self.emb_proj, train)
-            b = self._token_wise_linear(b, self.emb_proj, train)
+            a = self._token_wise_linear(a, self.emb_proj, l0, train, self.xp)
+            b = self._token_wise_linear(b, self.emb_proj, l1, train, self.xp)
         # Apply perceptron layer to each feature vectors ... eq. 1
         # (B, Ti, M) -> (B * Ti, M) -> (B * Ti, F) -> (B, Ti, F)
-        a_f = self._token_wise_linear(a, self.f, train)
-        b_f = self._token_wise_linear(b, self.f, train)
+        a_f = self._token_wise_linear(a, self.f, l0, train, self.xp)
+        b_f = self._token_wise_linear(b, self.f, l1, train, self.xp)
         # for each batch, calculate a_f[b]
         # e: (B, T0, T1)
         e = F.batch_matmul(a_f, b_f, transb=True)
@@ -150,8 +155,8 @@ class DecomposableAttentionModel(chainer.Chain):
         alpha = F.sum(F.broadcast_to(att_a, a_tiled.shape) * a_tiled, axis=1)
 
         # Make comparison, [(B, Ti, M), (B, Ti, M)] -> (B, M')
-        v1 = self._compare(a, beta, train)
-        v2 = self._compare(b, alpha, train)
+        v1 = self._compare(a, beta, l0, train, self.xp)
+        v2 = self._compare(b, alpha, l1, train, self.xp)
 
         # (B, M' + M') -> (B, n_class)  ... eq. 4 & 5
         v = F.concat((v1, v2), axis=1)

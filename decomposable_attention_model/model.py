@@ -16,13 +16,13 @@ def pairwise(iterable):
 
 
 class MLP(chainer.Chain):
-    def __init__(self, in_size, n_units, dropout, activation=F.relu,
+    def __init__(self, in_size, n_units, dropout, activation=F.tanh,
                  activation_on_final=False):
         n_units = [in_size, ] + n_units
         params = {}
         for i, n in enumerate(pairwise(n_units)):
             # Initial W according the paper
-            params['l' + str(i)] = L.Linear(*n, initialW=I.Uniform(0.01))
+            params['l' + str(i)] = L.Linear(*n, initialW=I.GlorotNormal())
         super(MLP, self).__init__(**params)
         self.add_persistent('_dropout', dropout)
         self.add_persistent('_activation_on_final', activation_on_final)
@@ -50,9 +50,9 @@ class DecomposableAttentionModel(chainer.Chain):
             emb=L.EmbedID(w2v.shape[0], feat_size, initialW=w2v,
                           ignore_label=-1),
             f=MLP(emb_proj_units, [f_units, f_units], f_dropout,
-                  activation_on_final=True),
+                  activation_on_final=False),
             g=MLP(emb_proj_units * 2, [g_units, g_units], g_dropout,
-                  activation_on_final=True),
+                  activation_on_final=False),
             h=MLP(g_units * 2, [200, n_class], 0.2,
                   activation_on_final=False)
         )

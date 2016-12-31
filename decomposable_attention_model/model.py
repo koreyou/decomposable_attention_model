@@ -68,9 +68,9 @@ class DecomposableAttentionModel(chainer.Chain):
         bs, t0, t1 = e.shape
         l0 = l0.reshape((bs, 1, 1))
         l1 = l1.reshape((bs, 1, 1))
-        mask0 = xp.tile(xp.arange(t0).reshape(1, t0, 1), (bs, 1, 1)) < l0
-        mask1 = xp.tile(xp.arange(t1).reshape(1, t1, 1), (bs, 1, 1)) < l1
-        mask = xp.matmul(mask0, mask1.swapaxes(1, 2))
+        mask0 = (xp.tile(xp.arange(t0).reshape(1, t0, 1), (bs, 1, 1)) < l0).astype(e.dtype)
+        mask1 = (xp.tile(xp.arange(t1).reshape(1, t1, 1), (bs, 1, 1)) < l1).astype(e.dtype)
+        mask = (xp.matmul(mask0, mask1.swapaxes(1, 2))).astype(np.bool)
         # mask: (B, T0, T1)
         mask = chainer.Variable(mask)
         padding = chainer.Variable(xp.zeros(e.shape, dtype=e.dtype))

@@ -27,12 +27,15 @@ def run(args):
     optimizer.setup(dam)
     optimizer.add_hook(chainer.optimizer.WeightDecay(0.0001))
     optimizer.add_hook(chainer.optimizer.GradientClipping(5.))
+    if args.gpu is not None:
+        dam.to_gpu(device=args.gpu)
 
     train_itr = chainer.iterators.SerialIterator(train, batch_size=4)
     training.train(dam, optimizer, train_itr, 10, dev=dev,
-                   device=None)
-    loss, acc, _ = training.forward_pred(dam, test, device=None)
+                   device=args.gpu)
+    loss, acc, _ = training.forward_pred(dam, test, device=args.gpu)
     logging.info("Test => loss={:0.4f} acc={:0.2f}".format(loss, acc))
+    if args.gpu is not None: dam.to_cpu()
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()

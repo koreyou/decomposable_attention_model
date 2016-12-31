@@ -36,7 +36,7 @@ def _parse_single(dic, vocab, ind_unks):
 
 def _pad_create(arr, dtype):
     s = max(map(len, arr))
-    ret = np.zeros((len(arr), s), dtype=dtype)
+    ret = np.ones((len(arr), s), dtype=dtype) * -1
     length = np.empty((len(arr), ), dtype=np.int32)
     for i, a in enumerate(arr):
         ret[i, :len(a)] = a

@@ -45,7 +45,8 @@ class DecomposableAttentionModel(chainer.Chain):
                  f_dropout, g_dropout, train_embedding):
         feat_size = w2v.shape[1]
         super(DecomposableAttentionModel, self).__init__(
-            emb=L.EmbedID(w2v.shape[0], feat_size, initialW=w2v),
+            emb=L.EmbedID(w2v.shape[0], feat_size, initialW=w2v,
+                          ignore_label=-1),
             emb_proj=MLP(feat_size, [emb_proj_units, ], 0.),
             f=MLP(emb_proj_units, [f_units, f_units], f_dropout,
                   activation_on_final=True),

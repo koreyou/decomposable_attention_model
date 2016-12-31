@@ -21,8 +21,8 @@ def run(args):
     dev = dataset.create_dataset(args.dev, vocab, ind_unks, 500)
     test = dataset.create_dataset(args.test, vocab, ind_unks, -1)
     dam = DecomposableAttentionModel(
-        w2v, 3, f_units=200, g_units=200, emb_proj_units=200, f_dropout=0.2,
-        g_dropout=0.2, train_embedding=False)
+        w2v, 3, f_units=200, g_units=200, f_dropout=0.2,
+        g_dropout=0.2, emb_proj_units=None)
     optimizer = chainer.optimizers.Adam()
     optimizer.setup(dam)
     optimizer.add_hook(chainer.optimizer.WeightDecay(0.0001))

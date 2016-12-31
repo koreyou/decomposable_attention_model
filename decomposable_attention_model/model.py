@@ -41,13 +41,14 @@ class MLP(chainer.Chain):
 
 
 class DecomposableAttentionModel(chainer.Chain):
-    def __init__(self, w2v, n_class, f_units, g_units, emb_proj_units,
-                 f_dropout, g_dropout, train_embedding):
+    def __init__(self, w2v, n_class, f_units, g_units, f_dropout, g_dropout,
+                 emb_proj_units=None):
         feat_size = w2v.shape[1]
+        if emb_proj_units is None:
+            emb_proj_units = feat_size
         super(DecomposableAttentionModel, self).__init__(
             emb=L.EmbedID(w2v.shape[0], feat_size, initialW=w2v,
                           ignore_label=-1),
-            emb_proj=MLP(feat_size, [emb_proj_units, ], 0.),
             f=MLP(emb_proj_units, [f_units, f_units], f_dropout,
                   activation_on_final=True),
             g=MLP(emb_proj_units * 2, [g_units, g_units], g_dropout,
@@ -55,7 +56,11 @@ class DecomposableAttentionModel(chainer.Chain):
             h=MLP(g_units * 2, [200, n_class], 0.2,
                   activation_on_final=False)
         )
-        self.add_persistent('_train_embedding', train_embedding)
+        if emb_proj_units is None:
+            self.add_persistent('_train_embedding', False)
+        else:
+            self.add_persistent('_train_embedding', True)
+            self.add_link('emb_proj', MLP(feat_size, [emb_proj_units, ], 0.),)
 
     @staticmethod
     def _length_aware_softmax(e, l0, l1, xp):
@@ -123,8 +128,8 @@ class DecomposableAttentionModel(chainer.Chain):
         if not self._train_embedding:
             a.unchain_backward()
             b.unchain_backward()
-        a = self._token_wise_linear(a, self.emb_proj, train)
-        b = self._token_wise_linear(b, self.emb_proj, train)
+            a = self._token_wise_linear(a, self.emb_proj, train)
+            b = self._token_wise_linear(b, self.emb_proj, train)
         # Apply perceptron layer to each feature vectors ... eq. 1
         # (B, Ti, M) -> (B * Ti, M) -> (B * Ti, F) -> (B, Ti, F)
         a_f = self._token_wise_linear(a, self.f, train)

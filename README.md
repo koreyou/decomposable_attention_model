@@ -14,9 +14,19 @@ Neural architecture for natural language inference. This is a Chainer implementa
 pip install -r requirements.py
 ```
 
-Download word2vec model from https://drive.google.com/file/d/0B7XkCwpI5KDYNlNUTTlSS21pQmM which is distributed in
-https://code.google.com/archive/p/word2vec/ .
+Download word2vec model from http://nlp.stanford.edu/data/glove.840B.300d.zip  which is distributed in
+http://nlp.stanford.edu/projects/glove/ .
+
+### Running
+
+```
+python bin/train.py
+```
+
+Currently all the parameters are written inside `train.py` thus you need to modify file.
+I checked that implementation is movin in the same way as the original paper, but I have not checked the performance of the model against the original implementation.
 
 ## Licence
 
-I distribute this code under CC-BY.
+I distribute this code under the Unlicence.
+But it would be nice if you can link to this repo if you are using this implementation.

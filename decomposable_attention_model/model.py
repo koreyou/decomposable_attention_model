@@ -61,6 +61,7 @@ class DecomposableAttentionModel(chainer.Chain):
         else:
             self.add_persistent('_train_embedding', True)
             self.add_link('emb_proj', MLP(feat_size, [emb_proj_units, ], 0.),)
+        self.add_persistent('global_step', 0)
 
     @staticmethod
     def _length_aware_softmax(e, l0, l1, xp):

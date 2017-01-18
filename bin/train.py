@@ -25,17 +25,21 @@ def run(args):
         g_dropout=0.2, emb_proj_units=None)
     optimizer = chainer.optimizers.Adam()
     optimizer.setup(dam)
-    optimizer.add_hook(chainer.optimizer.WeightDecay(0.0001))
-    optimizer.add_hook(chainer.optimizer.GradientClipping(5.))
+    optimizer.use_cleargrads()
+    #optimizer.add_hook(chainer.optimizer.WeightDecay(0.000001))
+    #optimizer.add_hook(chainer.optimizer.GradientClipping(5.))
     if args.gpu is not None:
         dam.to_gpu(device=args.gpu)
 
-    train_itr = chainer.iterators.SerialIterator(train, batch_size=4)
+    train_itr = chainer.iterators.SerialIterator(train, batch_size=12)
     training.train(dam, optimizer, train_itr, 10, dev=dev,
-                   device=args.gpu)
+                   device=args.gpu, report_intv=5000, short_report_intv=1000,
+                   lr_decay=0.999)
     loss, acc, _ = training.forward_pred(dam, test, device=args.gpu)
     logging.info("Test => loss={:0.4f} acc={:0.2f}".format(loss, acc))
     if args.gpu is not None: dam.to_cpu()
+    chainer.serializers.save_npz('trained_model', dam)
+
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()

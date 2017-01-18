@@ -33,26 +33,24 @@ def _run_batch(model, optimizer, batch, device, train):
 
 
 def forward_pred(model, dataset, device=None):
-    loss = 0.
-    acc = 0.
+    loss = Accumulator()
+    acc = Accumulator()
     pred = []
     iterator = chainer.iterators.SerialIterator(dataset, batch_size=4,
                                                 repeat=False, shuffle=False)
     for batch in iterator:
         l, a, p = _run_batch(model, None, batch, device, False)
-        loss += l * len(batch)
-        acc += a * len(batch)
+        loss.add(l, len(batch))
+        acc.add(a, len(batch))
         pred.append(p)
     pred = np.concatenate(pred)
-    return loss / float(len(dataset)), acc / float(len(dataset)), pred
+    return loss.eval(), acc.eval(), pred
 
 
 def train(model, optimizer, train_itr, n_epoch, dev=None, device=None,
           tmp_dir='tmp.model', short_report=None, lr_decay=0.9):
-    loss = 0.
-    acc = 0.
-    l = None
-    a = None
+    loss = Accumulator()
+    acc = Accumulator()
     min_loss = float('inf')
     min_epoch = 0
     num_steps = len(train_itr.dataset) / float(train_itr.batch_size)
@@ -61,28 +59,42 @@ def train(model, optimizer, train_itr, n_epoch, dev=None, device=None,
     report_tmpl = "[{:>3d}] T/loss={:0.4f} T/acc={:0.2f} D/loss={:0.4f} D/acc={:0.2f}"
     for batch in train_itr:
         if train_itr.is_new_epoch:
+        l, a, _ = _run_batch(model, optimizer, batch, device, True)
+        loss.add(l, len(batch))
+        acc.add(a, len(batch))
+
             # this is not executed at first epoch
             loss_dev, acc_dev, _ = forward_pred(model, dev, device=device)
-            loss = loss / len(train_itr.dataset)
-            acc = acc / len(train_itr.dataset)
             logging.info(report_tmpl.format(
-                train_itr.epoch - 1, loss, acc, loss_dev, acc_dev))
+                train_itr.epoch - 1, loss.eval(), acc.eval(), loss_dev, acc_dev))
             if loss_dev < min_loss:
                 min_loss = loss_dev
                 min_epoch = train_itr.epoch - 1
                 chainer.serializers.save_npz(tmp_dir, model)
-
-            loss = 0.
-            acc = 0.
         elif (short_report is not None and
               train_itr.current_position % short_report < train_itr.batch_size
               and l is not None):
             logging.info(report_short_tmpl.format(l, a))
         if train_itr.epoch == n_epoch:
             break
-        l, a, _ = _run_batch(model, optimizer, batch, device, True)
-        loss += l * len(batch)
-        acc += a * len(batch)
         optimizer.alpha *= lr_decay
     logging.info('loading early stopped-model at epoch {}'.format(min_epoch))
     chainer.serializers.load_npz(tmp_dir, model)
+
+
+class Accumulator(object):
+    def __init__(self):
+        self.clear()
+
+    def clear(self):
+        self.val = 0.
+        self.size = 0
+
+    def add(self, val, size):
+        self.val += val * size
+        self.size += size
+
+    def eval(self):
+        val = self.val / float(self.size)
+        self.clear()
+        return val
